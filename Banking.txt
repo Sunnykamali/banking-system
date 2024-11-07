@@ -1,0 +1,499 @@
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <sstream> 
+using namespace std;
+
+struct list {
+    string g; 
+    int n;
+    struct list *next;
+};
+
+struct bank {
+    int id;
+    string pass;
+    string name;
+    string city;
+    double balance;
+    struct bank *next;
+    struct list *his;
+};
+
+// Function prototypes for file handling
+void saveAccounts(bank* head);
+void loadAccounts(bank*& head);
+
+// Allocation of nodes
+bank* allow(int i, string n, string v, string b) {
+    bank* newBank = new bank();
+    newBank->id = i;
+    newBank->next = NULL;
+    newBank->his = NULL;
+    newBank->balance = 0;
+    newBank->name = n;
+    newBank->city = v;
+    newBank->pass = b;
+    return newBank;
+}
+
+// Function to create a new account in the linked list
+void create(int j, string s, string p, string c, bank *&s1) {
+    if (s1 == NULL) {
+        s1 = allow(j, s, c, p);
+    } else {
+        bank* temp = s1;
+        while (temp->next != NULL) {
+            temp = temp->next; 
+        }
+        temp->next = allow(j, s, c, p); 
+    }
+}
+
+// Function to display bank account details
+void dis(bank* n) {
+    cout << "Name: " << n->name << endl;
+    cout << "City: " << n->city << endl;
+    cout << "Balance: $" << n->balance << endl;
+    list *v = n->his;
+    while (v != NULL) {
+        cout << "Transaction: " << v->g << setw(15) << v->n << endl;
+        v = v->next;
+    }
+    n = n->next;
+    cout << endl;
+}
+
+// Function to check if an ID already exists
+bank* compare(bank *s2, int temp) {
+    while (s2 != NULL) {
+        if (s2->id == temp) {
+            return s2; 
+        }
+        s2 = s2->next;
+    }
+    return NULL; 
+}
+
+// Helper function to create a transaction
+void createTransaction(bank *s, string type, int val) {
+    list *newTransaction = new list();
+    newTransaction->g = type; 
+    newTransaction->n = val;
+    newTransaction->next = NULL;
+
+    if (s->his == NULL) {
+        s->his = newTransaction;
+    } else {
+        list *l = s->his;
+        while (l->next != NULL) {
+            l = l->next;
+        }
+        l->next = newTransaction;
+    }
+}
+
+// Withdraw function
+void withdraw(bank *s, int val,string type) {
+    if (s->balance < val) {
+        cout << "You can't withdraw amount due to low balance." << endl;
+    } else if(s->balance - val > 500) {
+        s->balance -= val;
+        createTransaction(s, type, val); 
+        cout << "You have withdrawn: $" << val << endl;
+        cout << "You have Total: $" << s->balance << endl;
+    } else {
+        cout << "You can't withdraw amount due to low balance below 500." << endl;
+    }
+}
+//function for deposit
+void deposit(bank *s, int val,string type) {
+    s->balance += val;
+    createTransaction(s, type, val);
+    cout << "You have deposited: $" << val << endl;
+    cout << "You have Total: $" << s->balance << endl;
+}
+//function for modifications
+void modify(bank *k) {
+    string name, city, password;
+    string idStr;
+    int id;
+    
+    cout << "Enter new name (press Enter to skip): ";
+    cin.ignore(); 
+    getline(cin, name);
+    if (!name.empty()) {
+        k->name = name;
+    }
+
+    cout << "Enter new password (press Enter to skip): ";
+    getline(cin, password);
+    if (!password.empty()) {
+        k->pass = password;
+    }
+
+    cout << "Enter new Account Number (press Enter to skip): ";
+    getline(cin, idStr);
+    if (!idStr.empty()) {
+        id = stoi(idStr);
+        k->id = id;
+    }
+
+    cout << "Enter new city name (press Enter to skip): ";
+    getline(cin, city);
+    if (!city.empty()) {
+        k->city = city;
+    }
+
+    cout << "Account details have been updated." << endl;
+}
+
+// Delete the account from bank
+void del(bank *&head, int id) {
+    if (head->id == id) {
+        bank *temp = head;
+        head = head->next; 
+        delete temp;
+        cout << "Account with Account Number " << id << " deleted successfully!" << endl;
+        return;
+    }
+
+    bank *current = head->next;
+    bank *previous = head;
+
+    while (current != NULL && current->id != id) {
+        previous = current; 
+        current = current->next; 
+    }
+    previous->next = current->next;
+    delete current;
+    cout << "Account with Account Number " << id << " deleted successfully!" << endl;
+}
+
+void transfer(int amount, bank* sender, bank* receiver) {
+    // Check if the sender and receiver accounts are valid
+    if (sender == NULL) {
+        cout << "Sender account not found." << endl;
+        return;
+    }
+    if (receiver == NULL) {
+        cout << "Receiver account not found." << endl;
+        return;
+    }
+
+    // Check if the sender has sufficient balance
+    if (sender->balance - amount < 500) {
+        cout << "You cannot transfer money due to insufficient balance (must keep at least $500)." << endl;
+        return;
+    }
+
+    // Perform the transfer
+    withdraw(sender,amount,"Send");  // Withdraw from the sender's account
+    deposit(receiver,amount,"Recive");  // Deposit into the receiver's account
+
+    cout << "Transferred $" << amount << " from account ID " << sender->id << " to account Account Number " << receiver->id << "." << endl;
+}
+
+// Function to manage user account actions
+void account(bank* a, bank *b) {
+    int choice2;
+    float bal;
+    do {
+        cout << "1. Withdraw" << endl
+             << "2. Deposit" << endl
+             << "3. Modify" << endl
+             << "4. Display" << endl
+             << "5. Transfer Money "<< endl
+             << "6. Delete" << endl
+             << "7. Exit" << endl;
+        cout << "Enter your choice: ";
+        cin >> choice2;
+
+        switch (choice2) {
+            case 1: {
+                cout << "Enter amount to withdraw: ";
+                cin >> bal;
+                withdraw(a, bal,"Withdraw");
+                break;
+                
+            }
+
+            case 2: {
+                cout << "Enter amount to deposit: ";
+                cin >> bal;
+                deposit(a, bal,"Deposit");
+                break;
+            }
+
+            case 3: {
+                cout << "Modify account details" << endl;
+                modify(a);
+                break;
+            }
+
+            case 4: {
+                cout << "Displaying account details..." << endl;
+                dis(a);
+                break;
+            }
+            
+            case 5: {
+                cout<<"Enter a bank account number where you want to send money: ";
+                int temp;
+                cin>>temp;
+                cout<<"Enter a ammount: ";
+                int temp2;
+                cin>>temp2;
+                bank* n= compare(b, temp);
+                transfer(temp2,a,n);
+                break;
+            }
+
+            case 6: {
+                break;
+            }
+
+            case 7: {
+                cout << "Exiting to main menu..." << endl;
+                break;
+            }
+
+            default:
+                cout << "Invalid choice! Please enter a number between 1 and 6." << endl;
+        }
+    } while (choice2 != 7 && choice2 != 6);
+    if (choice2 == 6) {
+        cout << "Deleting account..." << endl;
+        del(b, a->id);
+    }
+}
+
+// Function to load accounts from a file
+void loadAccounts(bank*& head) {
+    ifstream inFile("accounts.txt");
+    if (!inFile) {
+        cout << "Starting fresh Bank." << endl;
+        return;
+    }
+    
+    int id;
+    string name, pass, city, transaction;
+    double balance;
+
+    while (true) {
+        string line;
+        if (!getline(inFile, line) || line.find("Account Number-") != 0) break;
+        id = stoi(line.substr(3));
+
+        
+        getline(inFile, line);
+        name = line.substr(5); 
+        
+        getline(inFile, line);
+        city = line.substr(5); 
+        
+        getline(inFile, line);
+        pass = line.substr(9); 
+        getline(inFile, line);
+        balance = stod(line.substr(14)); 
+        bank* newAccount = allow(id, name, city, pass);
+        newAccount->balance = balance;
+        create(id, name, pass, city, head);
+
+        while (getline(inFile, line)) {
+            if (line.find("transaction-") != 0) break;
+            stringstream ss(line.substr(13)); 
+            string transType;
+            int amount;
+            ss >> transType >> amount;
+            createTransaction(newAccount, transType, amount);
+        }
+    }
+
+    inFile.close();
+}
+
+// Function to save accounts to a file
+void saveAccounts(bank* head) {
+    ofstream outFile("accounts.txt");
+    bank* current = head;
+
+    while (current != NULL) {
+        outFile << "Account Number-" << current->id << endl;
+        outFile << "Name-" << current->name << endl;
+        outFile << "City-" << current->city << endl;
+        outFile << "Password-" << current->pass << endl;
+        outFile << "Total balance-" << current->balance << endl;
+
+        // Save transactions
+        list* transaction = current->his;
+        while (transaction != NULL) {
+            outFile << "transaction-" << transaction->g << " " << transaction->n << endl;
+            transaction = transaction->next;
+        }
+
+        current = current->next;
+    }
+
+    outFile.close();
+}
+
+int manager(string name, string pass, bank *b) {
+    if (name == "Sunny" && pass == "Singh") {
+        cout << "Manager access granted." << endl;
+        int choice;
+        do {
+            cout << "1. Display Accounts" << endl
+                 << "2. Access Account" << endl
+                 << "3. Close Bank" << endl
+                 << "4. Exit" << endl;
+            cout << "Enter your choice: ";
+            cin >> choice;
+            
+            switch (choice) {
+                case 1: {
+                    cout << "Sr NO." << setw(20) << "Account Number" << setw(20) << "Account Name" << endl;
+                    if (b == NULL) {
+                        cout << "The list is empty. No accounts to display." << endl;
+                    } else {
+                        bank *temp = b;
+                        int count = 1;
+                        while (temp != NULL) {
+                            cout << count << setw(20) << temp->id << setw(20) << temp->name << endl;
+                            temp = temp->next;
+                            count++;
+                        }
+                    }
+                    break;
+                }
+                case 2: {
+                    cout << "Enter Account ID: ";
+                    int tempId;
+                    cin >> tempId;
+                    bank *temp = b;
+                    
+                    while (temp != NULL) {
+                        if (temp->id == tempId) {
+                            cout << "Accessing account for: " << temp->name << endl;
+                            break;
+                        }
+                        temp = temp->next;
+                    }
+                    account(temp, b);
+                    
+                    if (temp == NULL) {
+                        cout << "The account was not found." << endl;
+                    }
+                    break;
+                }
+                case 3: {
+                    cout << "Closing the bank. All operations will be terminated." << endl;
+                    return 1;
+                    break;
+                }
+                case 4: {
+                    cout << "Exiting Manager Menu..." << endl;
+                    return 0;
+                    break;
+                }
+                default: {
+                    cout << "Invalid choice! Please enter a number between 1 and 4." << endl;
+                }
+            }
+        } while (choice != 4);
+
+        return 1;
+    } else {
+        cout << "Invalid manager credentials." << endl;
+        return 0;
+    }
+}
+
+int main() {
+    bank *head = NULL;
+    loadAccounts(head);
+    int choice;
+    cout<<"Welocme to MY BANK"<<endl;
+    
+    do {
+        int id;
+        string pass, city, name;
+        cout << "1. Login" << endl
+             << "2. Create Account" << endl
+             << "3. Manager Login" << endl
+             << "4. Exit" << endl;
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                cout << "Welcome to Login" << endl;
+                cout << "Enter user Account Number(in numbers): ";
+                cin >> id;
+                bank *v = compare(head, id);
+                if (v == NULL) {
+                    cout << "Invalid Account Number. Please try again." << endl;
+                    break;
+                }
+                cout << "Enter password: ";
+                cin >> pass;
+                if (v->pass != pass) {
+                    cout << "Incorrect password. Please try again." << endl;
+                    break;
+                }
+                cout << "Login successful!" << endl;
+                account(v, head);
+                break;
+            }
+
+            case 2: {
+                cout << "Welcome to Create Account" << endl
+                << "You Have To maintain 500$ amount in your bank" << endl
+                << "Create new user Account Number(in numbers): ";
+                cin >> id;
+
+                if (compare(head, id) != NULL) {
+                    cout << "Account already exists. Please choose a different Account Number." << endl;
+                    break;
+                }
+
+                cout << "Enter name: ";
+                cin >> name;
+                cout << "Enter password: ";
+                cin >> pass;
+                cout << "Enter city: ";
+                cin >> city;
+                create(id, name, pass, city, head);
+                cout << "Account created successfully!" << endl;
+                break;
+            }
+
+            case 3: {
+                cout << "Manager Login" << endl;
+                string name;
+                string pass;
+                cout << "Enter manager name: ";
+                cin >> name;
+                cout << "Enter password: ";
+                cin >> pass;
+                int j = manager(name, pass, head);
+                if (j == 1) {
+                    saveAccounts(head); 
+                    return 0;
+                }
+                break;
+            }
+
+            case 4: {
+                cout << "Exiting the program. Goodbye!" << endl;
+                saveAccounts(head);
+                break;
+            }
+
+            default:
+                cout << "Invalid choice! Please enter a number between 1 and 4." << endl;
+        }
+    } while (choice != 4);
+
+    return 0;
+}
